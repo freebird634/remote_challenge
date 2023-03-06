@@ -1,0 +1,12 @@
+---
+
+- hosts: web_servers
+  become: true
+  tasks:
+  - name: sync website
+    copy:
+      src: ../{{ svc }}/index.html
+      dest: /var/www/{{ domain }}
+      owner: root
+      group: root
+      mode: 0644

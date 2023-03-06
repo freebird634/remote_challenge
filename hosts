@@ -1,6 +1,6 @@
 [web_servers]
-54.191.124.3 
-54.185.176.222
+54.191.124.3 ansible_user=ubuntu domain=54.191.124.3 svc=a ansible_ssh_private_key_file=~/.ssh/id_ed25519
+54.185.176.222 ansible_user=ubuntu domain=54.185.176.222 svc=b ansible_ssh_private_key_file=~/.ssh/id_ed25519
 
 [load_balancers]
 35.91.79.170
