@@ -39,5 +39,15 @@ Lock down the network:
   - [ ] Block all other unused/unnecessary ports
 
 ## Resources used
-Ansible docs:
+### Ansible docs:
 https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-configuration-settings
+https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_handlers.html#notifying-handlers
+
+### Ansible apt docs:
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html#examples
+
+### Setting up the webservers:
+I shamelessly stole a lot of this: https://graspingtech.com/ansible-nginx-static-site/
+However, I ran into issues getting the synchronize module to work.  So I ended up using the built-in copy module instead: https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html
+
+I'm not entirely sure if this is what is meant by serving 'a' and 'b' at index.html - but each webserver is pointing at a different folder, a or b, with their own unique index.html.  These could represent actual web applications.

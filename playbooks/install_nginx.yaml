@@ -1,0 +1,53 @@
+---
+
+- hosts: web_servers
+  become: true
+  tasks:
+  - name: update apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+  - name: install nginx
+    apt: 
+      name: nginx
+      state: latest
+
+    notify:
+      - restart nginx
+
+  - name: "create www directory"
+    file:
+      path: /var/www/{{ domain }}
+      state: directory
+      mode: '0775'
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+
+  - name: delete default nginx site
+    file:
+      path: /etc/nginx/sites-enabled/default
+      state: absent
+    notify: restart nginx
+
+  - name: copy nginx site.conf
+    template:
+      src: site.conf.j2
+      dest: /etc/nginx/sites-enabled/{{ domain }}
+      owner: root
+      group: root
+      mode: '0644'
+    notify: restart nginx
+
+  - name: get service facts
+    service_facts:
+ 
+  - name: confirm that nginx service is running
+    fail:
+      msg: nginx not installed
+    when: ansible_facts.services["nginx.service"] is not defined
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: reloaded    
