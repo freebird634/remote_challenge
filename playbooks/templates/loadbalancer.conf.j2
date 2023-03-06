@@ -1,0 +1,22 @@
+http {
+    upstream backend {
+        ip_hash;
+        server 54.191.124.3;
+        server 54.185.176.222;
+    }
+}
+
+server {
+    listen 60000-65000;
+    server_name remotechallenge;
+    location / {
+      proxy_read_timeout 300s;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_pass http://backend:80;
+    }
+}
+
+events {
+    # this needs to be bumped to allow 5k ports
+    worker_connections 1024;
+}

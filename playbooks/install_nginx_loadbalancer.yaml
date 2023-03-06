@@ -1,0 +1,45 @@
+---
+
+- hosts: load_balancers
+  become: true
+  tasks:
+  - name: update apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+  - name: install nginx
+    apt: 
+      name: nginx
+      state: latest
+
+    notify:
+      - restart nginx
+  
+  # - name: copy nginx loadbalancer config
+  #   template:
+  #     src: loadbalancer.conf.j2
+  #     dest: /etc/nginx/sites-available/nginx.cfg
+  #     owner: root
+  #     group: root
+  #     mode: '0644'
+  #   notify: restart nginx
+  
+  # - name: create symlink
+  #   file:
+  #     src: /etc/nginx/sites-available/nginx.cfg
+  #     dest: /etc/nginx/sites-enabled/default
+  #     state: link
+
+  - name: get service facts
+    service_facts:
+ 
+  - name: confirm that nginx service is running
+    fail:
+      msg: nginx not installed
+    when: ansible_facts.services["nginx.service"] is not defined
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: reloaded    

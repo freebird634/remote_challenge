@@ -20,13 +20,13 @@ sudo -i
 ## Tasks
 
 Individual Server Configuration:
-- [ ] 1st and 2nd servers should be web servers - one serves 'a', the other 'b' at index.html (nginx)
+- [X] 1st and 2nd servers should be web servers - one serves 'a', the other 'b' at index.html (nginx)
 - [ ] Add a load balancer on the 3rd server to load balance between the webservers (nginx)
     - [ ] Configure the load balancer
-        • Any balancing scheme (round robin, random, load based, etc.)
-        • Configure the load balancer to be "sticky" - the same host should hit the same webserver for repeat requests, only switching when a webserver goes down, and not switching back when the webserver goes back up
-        • Pass the original requesting ip to the webservers
-        • Make port range 60000-65000 on the load balancer all get fed to the web servers on port 80.
+        - [ ] Any balancing scheme (round robin, random, load based, etc.)
+        - [ ] Configure the load balancer to be "sticky" - the same host should hit the same webserver for repeat requests, only switching when a webserver goes down, and not switching back when the webserver goes back up
+        - [ ] Pass the original requesting ip to the webservers
+        - [ ] Make port range 60000-65000 on the load balancer all get fed to the web servers on port 80.
 - [ ] The 4th server will run nagios to it will monitor the web servers and load balancer
 
 On all boxes:
@@ -38,7 +38,7 @@ Lock down the network:
   - [ ] From that server, be able to access the others via ssh
   - [ ] Block all other unused/unnecessary ports
 
-## Resources used
+## Resources used and Notes
 ### Ansible docs:
 https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-configuration-settings
 https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_handlers.html#notifying-handlers
@@ -51,3 +51,11 @@ I shamelessly stole a lot of this: https://graspingtech.com/ansible-nginx-static
 However, I ran into issues getting the synchronize module to work.  So I ended up using the built-in copy module instead: https://docs.ansible.com/ansible/latest/collections/ansible/builtin/copy_module.html
 
 I'm not entirely sure if this is what is meant by serving 'a' and 'b' at index.html - but each webserver is pointing at a different folder, a or b, with their own unique index.html.  These could represent actual web applications.
+
+### Setting up the load balancer:
+https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/
+
+#### Choosing a load-balancing method
+In order to implement sticky load-balancing in open source nginx, the ip_hash or hash load-balancing configurations must be used.  I decided on ip_hash since it seemed the most simple. This configuration chooses the server to which a request is sent based on the client IP address.
+
+##### TODO next - finish lb config - nginx installed and running on lb host
