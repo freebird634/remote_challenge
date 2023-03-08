@@ -12,23 +12,31 @@
       name: nginx
       state: latest
 
-    notify:
-      - restart nginx
+    notify: restart nginx
+
+  - name: copy custom nginx conf
+    template:
+      src: lbnginxconf.conf.j2
+      dest: /etc/nginx/nginx.conf
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: copy nginx loadbalancer config
+    template:
+      src: loadbalancer.conf.j2
+      dest: /etc/nginx/sites-available/nginx.cfg
+      owner: root
+      group: root
+      mode: '0644'
   
-  # - name: copy nginx loadbalancer config
-  #   template:
-  #     src: loadbalancer.conf.j2
-  #     dest: /etc/nginx/sites-available/nginx.cfg
-  #     owner: root
-  #     group: root
-  #     mode: '0644'
-  #   notify: restart nginx
-  
-  # - name: create symlink
-  #   file:
-  #     src: /etc/nginx/sites-available/nginx.cfg
-  #     dest: /etc/nginx/sites-enabled/default
-  #     state: link
+  - name: create symlink
+    file:
+      src: /etc/nginx/sites-available/nginx.cfg
+      dest: /etc/nginx/sites-enabled/nginx.cfg
+      state: link
+
+    notify: restart nginx
 
   - name: get service facts
     service_facts:
