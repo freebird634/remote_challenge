@@ -1,0 +1,126 @@
+---
+
+- hosts: monitors
+  become: true
+  tasks:
+  - name: update apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+
+  - name: install nagios dependencies
+    apt: 
+      pkg:
+        - unzip
+        - build-essential
+        - libgd-dev
+        - libssl-dev
+        - libapache2-mod-php
+        - php-gd
+        - php 
+        - apache2
+      state: latest
+  - name: create nagios group ##### good
+    ansible.builtin.group:
+      name: nagios
+      state: present
+  - name: create nagios user
+    ansible.builtin.user:
+      name: nagios
+      shell: /bin/bash
+      state: present
+      groups: nagios
+  - name: create download directory
+    ansible.builtin.file:
+      path: "{{ ansible_env.HOME }}/nagios"
+      owner: root
+      group: root
+      mode: 0755
+      state: directory
+  - name: download nagios core
+    ansible.builtin.get_url:
+      url: https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.10.tar.gz 
+      dest: "{{ ansible_env.HOME }}/nagios/nagios-4.4.10.tar.gz"
+      mode: 0755
+  - name: extract files
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios" && tar -xvzf nagios-4.4.10.tar.gz
+  
+  - name: configure nagios core
+    ansible.builtin.shell: ./configure --with-command-group=nagios --with-nagios-user=nagios --with-httpd-conf=/etc/apache2/conf-available
+    args:
+      chdir: "{{ ansible_env.HOME }}/nagios/nagios-4.4.10"
+      creates: "{{ ansible_env.HOME }}/nagios/nagios-4.4.10/Makefile"
+  
+  - name: make all
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make all creates="{{ ansible_env.HOME }}/nagios/nagios-4.4.10/base/nagios"
+
+  - name: make install
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make install creates=/usr/local/nagios/bin/nagios
+
+  - name: make install-config
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make install-config creates=/usr/local/nagios/etc/nagios.cfg
+
+  - name: make install-commandmode
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make install-commandmode creates=/usr/local/nagios/var/rw
+
+  - name: make install-devel
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make install-devel creates=/usr/local/nagios/include/nagios/nagios.h
+
+  - name: make install-webconf
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make install-webconf creates=/etc/apache2/conf-available/nagios.conf
+    notify: restart apache
+
+  - name: check if /etc/init.d/nagios exists
+    ansible.builtin.stat:
+      path: /etc/init.d/nagios
+    register: init_d_nagios_stat
+
+  - name: check if /lib/systemd/system/nagios.service exists
+    ansible.builtin.stat:
+      path: /lib/systemd/system/nagios.service
+    register: nagios_service_stat
+
+  - name: make install-init
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-4.4.10" && make install-init
+    when:
+      - not init_d_nagios_stat.stat.exists
+      - not nagios_service_stat.stat.exists
+
+  - name: re-check if /etc/init.d/nagios exists
+    ansible.builtin.stat:
+      path: /etc/init.d/nagios
+    register: init_d_nagios_stat_2
+
+  - name: insert/update /etc/init.d/nagios
+    ansible.builtin.lineinfile:
+      dest: /etc/init.d/nagios
+      regexp: "{{ item.regexp }}"
+      line: "{{ item.line }}"
+      insertbefore: "### END INIT INFO"
+    with_items:
+      - {regexp: '^# Default-Start:\s*2 3 4 5', line: '# Default-Start:        2 3 4 5'}
+      - {regexp: '^# Default-Stop:\s*0 1 6', line: '# Default-Stop:         0 1 6'}
+    when: init_d_nagios_stat_2.stat.exists
+
+  - name: Set htpasswd for gui user
+    community.general.htpasswd:
+      path: /usr/local/nagios/etc/htpasswd.users
+      name: nagiosadmin
+      password: Password1change
+      state: present
+      owner: root
+      group: root
+      mode: 0644
+    no_log: true
+
+  - name: ensure nagios is started
+    service:
+      name: nagios
+      state: started
+      enabled: yes
+  
+  handlers:
+    - name: restart apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
