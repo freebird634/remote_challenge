@@ -27,7 +27,7 @@ Individual Server Configuration:
         - [X] Configure the load balancer to be "sticky" - the same host should hit the same webserver for repeat requests, only switching when a webserver goes down, and not switching back when the webserver goes back up
         - [X] Pass the original requesting ip to the webservers (X-Real-IP)
         - [X] Make port range 60000-65000 on the load balancer all get fed to the web servers on port 80.
-- [ ] The 4th server will run nagios to monitor the web servers and load balancer
+- [X] The 4th server will run nagios to monitor the web servers and load balancer
 
 On all boxes:
 - [ ] Add 'expensify' user
@@ -71,7 +71,6 @@ I also learned some neat troubleshooting commands for nginx config that I didn't
 `nginx -c /etc/nginx/sites-enabled/default -t`
 `nginx -c /etc/nginx/nginx.conf -t`
 
-
 ### Installing and configuring nagios
 https://www.howtoforge.com/tutorial/ubuntu-nagios/ 
 https://docs.ansible.com/ansible/latest/collections/ansible/builtin/get_url_module.html
@@ -84,3 +83,8 @@ To keep things simple, I opted not to use hostgroups in the nagios config (since
 
 Checked config files were valid with:
 `/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg`
+
+Logged into the nagios browser interface at http://54.188.209.19/nagios
+I realized that an error was masking the fact that I didn't properly set up the nagios admin password (no_log: true) so I had to install some additional python packages to get that to work.
+
+After properly setting the nagiosadmin password, and restarting apache2 + nagios, I was able to access the nagios UI.
