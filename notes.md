@@ -21,13 +21,13 @@ sudo -i
 
 Individual Server Configuration:
 - [X] 1st and 2nd servers should be web servers - one serves 'a', the other 'b' at index.html (nginx)
-- [ ] Add a load balancer on the 3rd server to load balance between the webservers (nginx)
-    - [ ] Configure the load balancer
+- [X] Add a load balancer on the 3rd server to load balance between the webservers (nginx)
+    - [X] Configure the load balancer
         - [X] Any balancing scheme (ip_hash)
         - [X] Configure the load balancer to be "sticky" - the same host should hit the same webserver for repeat requests, only switching when a webserver goes down, and not switching back when the webserver goes back up
         - [X] Pass the original requesting ip to the webservers (X-Real-IP)
         - [X] Make port range 60000-65000 on the load balancer all get fed to the web servers on port 80.
-- [ ] The 4th server will run nagios to it will monitor the web servers and load balancer
+- [ ] The 4th server will run nagios to monitor the web servers and load balancer
 
 On all boxes:
 - [ ] Add 'expensify' user
@@ -67,9 +67,14 @@ https://www.cyberciti.biz/faq/linux-unix-nginx-too-many-open-files/.  I also nee
 
 Also /etc/default/nginx ULIMIT="-n 65535"
 
-nginx -c /etc/nginx/sites-enabled/default -t
-nginx: [alert] could not open error log file: open() "/var/log/nginx/error.log" failed (13: Permission denied)
-2023/03/08 04:17:32 [emerg] 36890#36890: "upstream" directive is not allowed here in /etc/nginx/sites-enabled/default:1
-nginx: configuration file /etc/nginx/sites-enabled/default test failed
+I also learned some neat troubleshooting commands for nginx config that I didn't know about:
+`nginx -c /etc/nginx/sites-enabled/default -t`
+`nginx -c /etc/nginx/nginx.conf -t`
 
-nginx -c /etc/nginx/nginx.conf -t
+
+### Installing and configuring nagios
+https://www.howtoforge.com/tutorial/ubuntu-nagios/ 
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/get_url_module.html
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/shell_module.html
+
+I borrowed heavily from: https://github.com/sdarwin/Ansible-Nagios 

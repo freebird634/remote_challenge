@@ -17,19 +17,28 @@
         - libssl-dev
         - libapache2-mod-php
         - php-gd
-        - php 
         - apache2
+        - php
       state: latest
-  - name: create nagios group ##### good
+  - name: create nagios group
     ansible.builtin.group:
       name: nagios
+      state: present
+  - name: create nagcmd group
+    ansible.builtin.group:
+      name: nagcmd
       state: present
   - name: create nagios user
     ansible.builtin.user:
       name: nagios
       shell: /bin/bash
       state: present
-      groups: nagios
+      groups: nagcmd
+  - name: add apache user to nagcmd group
+    ansible.builtin.user:
+      name: www-data
+      state: present
+      groups: nagcmd
   - name: create download directory
     ansible.builtin.file:
       path: "{{ ansible_env.HOME }}/nagios"
@@ -46,7 +55,7 @@
     ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios" && tar -xvzf nagios-4.4.10.tar.gz
   
   - name: configure nagios core
-    ansible.builtin.shell: ./configure --with-command-group=nagios --with-nagios-user=nagios --with-httpd-conf=/etc/apache2/conf-available
+    ansible.builtin.shell: ./configure --with-command-group=nagcmd --with-nagios-user=nagios --with-httpd-conf=/etc/apache2/conf-available
     args:
       chdir: "{{ ansible_env.HOME }}/nagios/nagios-4.4.10"
       creates: "{{ ansible_env.HOME }}/nagios/nagios-4.4.10/Makefile"
