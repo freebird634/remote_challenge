@@ -114,7 +114,7 @@
   - name: Set htpasswd for gui user
     community.general.htpasswd:
       path: /usr/local/nagios/etc/htpasswd.users
-      name: nagiosadmin
+      name: nagiosadmin # nagiosadmin is also the default contact in contacts.cfg
       password: Password1change
       state: present
       owner: root

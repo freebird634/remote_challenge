@@ -76,5 +76,11 @@ I also learned some neat troubleshooting commands for nginx config that I didn't
 https://www.howtoforge.com/tutorial/ubuntu-nagios/ 
 https://docs.ansible.com/ansible/latest/collections/ansible/builtin/get_url_module.html
 https://docs.ansible.com/ansible/latest/collections/ansible/builtin/shell_module.html
+https://www.tutorialspoint.com/nagios/nagios_hosts_and_services.htm
 
 I borrowed heavily from: https://github.com/sdarwin/Ansible-Nagios 
+
+To keep things simple, I opted not to use hostgroups in the nagios config (since we only have a handful of servers to monitor).  I also left most of the defaults from the base-host host definition template in hosts.cfg.
+
+Checked config files were valid with:
+`/usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg`

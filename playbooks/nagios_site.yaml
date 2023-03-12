@@ -110,9 +110,6 @@
 #           group: nagios
 #           remote_src: true
 
-
-  ^^ Everything above has been completed successfully
-  TODO: finish setting up vars for hosts to monitor
   # Install configuration
   - name: Install config files
     become: true
@@ -125,23 +122,7 @@
       mode: 0640
     with_items:
       - {src: hosts.cfg, dest: hosts.cfg}
-      - {src: hostgroups.cfg, dest: hostgroups.cfg}
-      - {src: services.cfg, dest: services.cfg}
       - {src: commands.cfg, dest: additional_commands.cfg}
-      - {src: additional_timeperiods.cfg, dest: additional_timeperiods.cfg}
-
-  - name: install contacts.cfg
-    become: true
-    notify: restart nagios
-    ansible.builtin.template:
-      src: "{{ item.src }}"
-      dest: "/usr/local/nagios/etc/objects/{{ item.dest }}"
-      owner: nagios
-      group: nagios
-      mode: 0640
-    with_items:
-      - {src: contacts.cfg, dest: contacts.cfg}
-    when: users is defined
 
   - name: install more config files
     become: true
@@ -155,19 +136,13 @@
     with_items:
       - {src: cgi.cfg, dest: cgi.cfg}
 
-  - name: update nagios.cfg with config files
+  - name: update nagios.cfg with host config file
     become: true
     notify: restart nagios
     ansible.builtin.lineinfile:
       dest: /usr/local/nagios/etc/nagios.cfg
-      line: "cfg_file=/usr/local/nagios/etc/objects/{{ item }}.cfg"
-      regexp: "^cfg_file=/usr/local/nagios/etc/objects/{{ item }}.cfg"
-    with_items:
-      - hosts
-      - hostgroups
-      - services
-      - additional_commands
-      - additional_timeperiods
+      line: "cfg_file=/usr/local/nagios/etc/objects/hosts.cfg"
+      regexp: "^cfg_file=/usr/local/nagios/etc/objects/hosts.cfg"
     when: not nagios_cfg_dir_enabled
   - name: update nagios.cfg with config dir
     become: true
