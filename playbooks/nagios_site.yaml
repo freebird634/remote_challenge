@@ -1,0 +1,185 @@
+# Install nagios plugins
+---
+
+- hosts: monitors
+  become: true
+  tasks:
+  - name: get nagios plugins
+    ansible.builtin.get_url:
+      url: http://www.nagios-plugins.org/download/nagios-plugins-2.4.3.tar.gz
+      dest: "{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3.tar.gz"
+      mode: 0755
+
+  - name: unpack plugin files
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios" && tar -xzvf nagios-plugins-2.4.3.tar.gz creates="{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3"
+
+  - name: configure plugins
+    ansible.builtin.shell: ./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl=/usr/bin/openssl
+    args:
+      chdir: "{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3"
+      creates: "{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3/Makefile"
+
+  - name: make plugins
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3" && make creates="{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3./plugins/check_ping"
+
+  - name: make install plugins
+    ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nagios-plugins-2.4.3" && make install creates=/usr/local/nagios/libexec/check_ping
+
+# Configure monitor website
+
+  - name: activate nagios site
+    ansible.builtin.file:
+      src: /etc/apache2/conf-available/nagios.conf
+      dest: /etc/apache2/conf-enabled/nagios.conf
+      state: link
+      owner: root
+      group: root
+    notify: restart apache
+  - name: enable CGI
+    community.general.apache2_module:
+      name: cgi
+      state: present
+    notify: restart apache
+  - name: check apache
+    ansible.builtin.service:
+      name: apache2
+      state: started
+      enabled: true
+
+# Install nrpe package
+  - name: install check_nrpe from a package
+    when:
+      - check_nrpe_package is defined
+    block:
+      - name: install check_nrpe package
+        ansible.builtin.package:
+          name: "{{ check_nrpe_package }}"
+          state: present
+          update_cache: true
+      - name: copy check_nrpe
+        ansible.builtin.copy:
+          src: /usr/lib/nagios/plugins/check_nrpe
+          dest: /usr/local/nagios/libexec/check_nrpe
+          mode: 0755
+          owner: nagios
+          group: nagios
+          remote_src: true
+  - name: install check_nrpe from source
+    when:
+      - check_nrpe_package is not defined
+    block:
+      - name: ensure download directory is present
+        ansible.builtin.file:
+          path: "{{ ansible_env.HOME }}/nagios"
+          owner: root
+          group: root
+          mode: 0755
+          state: directory
+      - name: get nrpe
+        ansible.builtin.get_url:
+          timeout: 30
+          url: "https://sourceforge.net/projects/nagios/files/nrpe-4.x/nrpe-4.0.3/nrpe-4.0.3.tar.gz/download"
+          dest: "{{ ansible_env.HOME }}/nagios/nrpe-4.0.3.tar.gz"
+          mode: 0755
+        retries: 3
+        delay: 40
+        register: result
+        until: result is not failed
+      - name: unpack nrpe files
+        ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios" && tar -xzvf nrpe-4.0.3.tar.gz creates="{{ ansible_env.HOME }}/nagios/nrpe-4.0.3"
+      - name: configure nrpe
+        ansible.builtin.shell: ./configure --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu
+        args:
+          chdir: "{{ ansible_env.HOME }}/nagios/nrpe-4.0.3"
+          creates: "{{ ansible_env.HOME }}/nagios/nrpe-4.0.3/Makefile"
+      - name: make nrpe
+        ansible.builtin.shell: cd "{{ ansible_env.HOME }}/nagios/nrpe-4.0.3" && make all creates="{{ ansible_env.HOME }}/nagios/nrpe-4.0.3/src/check_nrpe"
+      - name: ensure plugins directory is present
+        ansible.builtin.file:
+          path: /usr/local/nagios/libexec
+          state: directory
+          owner: root
+          group: root
+          mode: 0755
+      - name: copy check_nrpe
+        ansible.builtin.copy:
+          src: "{{ ansible_env.HOME }}/nagios/nrpe-4.0.3/src/check_nrpe"
+          dest: /usr/local/nagios/libexec/check_nrpe
+          mode: 0755
+          owner: nagios
+          group: nagios
+          remote_src: true
+
+  # Install configuration
+  - name: install config files
+    become: true
+    notify: restart nagios
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "/usr/local/nagios/etc/objects/{{ item.dest }}"
+      owner: nagios
+      group: nagios
+      mode: 0640
+    with_items:
+      - {src: hosts.cfg, dest: hosts.cfg}
+      - {src: commands.cfg, dest: additional_commands.cfg}
+
+  - name: install more config files
+    become: true
+    notify: restart nagios
+    ansible.builtin.template:
+      src: "{{ item.src }}"
+      dest: "/usr/local/nagios/etc/{{ item.dest }}"
+      owner: nagios
+      group: nagios
+      mode: 0775
+    with_items:
+      - {src: cgi.cfg, dest: cgi.cfg}
+
+  - name: update nagios.cfg with host config file
+    become: true
+    notify: restart nagios
+    ansible.builtin.lineinfile:
+      dest: /usr/local/nagios/etc/nagios.cfg
+      line: "cfg_file=/usr/local/nagios/etc/objects/hosts.cfg"
+      regexp: "^cfg_file=/usr/local/nagios/etc/objects/hosts.cfg"
+
+ # if there is a conflict: two localhost definitions
+  - name: Update nagios.cfg, comment out localhost
+    become: true
+    notify: restart nagios
+    ansible.builtin.lineinfile:
+      path: /usr/local/nagios/etc/nagios.cfg
+      line: "#cfg_file=/usr/local/nagios/etc/objects//{{ item }}.cfg"
+      # regexp: "^cfg_file\={{ nagios_object_dir }}/{{item}}\.cfg"
+      regexp: "^cfg_file=/usr/local/nagios/etc/objects//{{ item }}.cfg"
+      backrefs: true
+    with_items:
+      - localhost
+    when: nagios_removelocalhost is defined or 'localhost' in groups['all']
+
+  - name: ensure nagios is started
+    ansible.builtin.service:
+      name: nagios
+      state: started
+      enabled: true
+
+  handlers:
+    - name: restart apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+
+    - name: restart nagios
+      become: true
+      ansible.builtin.service:
+        name: nagios
+        state: restarted
+
+  # add some basic monitoring commands
+  vars:
+    nagios_commands:
+    - {name: 'check_disk', command: '$USER1$/check_nrpe -H $HOSTADDRESS$ -c check_disk'}
+    - {name: 'check_load', command: '$USER1$/check_nrpe -H $HOSTADDRESS$ -c check_load'}
+    - {name: 'check_swap', command: '$USER1$/check_nrpe -H $HOSTADDRESS$ -c check_swap'}
+    - {name: 'check_mem', command: '$USER1$/check_nrpe -H $HOSTADDRESS$ -c check_mem'}
