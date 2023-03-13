@@ -1,0 +1,38 @@
+---
+
+- hosts: all_hosts
+  become: true
+  tasks:
+  - name: create admin group
+    ansible.builtin.group:
+      name: admin
+      state: present
+  - name: add expensify user to all hosts
+    ansible.builtin.user:
+      name: expensify
+      shell: /bin/bash
+      state: present
+      groups: "admin,sudo"
+      password: $6$rounds=656000$mysecretsalt$fIQkKCKlsXRHMVJDZZWgD.VzHjEk07thxJ1.Uxmd1VSEneHgrpGsQrwunV2xeEaK0l5GF5nIAJgMBPZ3LZKgA/ # f00bar1*
+  - name: add authorized ssh keys
+    authorized_key:
+      user: expensify
+      key: "{{ lookup('file', '../public_keys/'+ item + '.key.pub') }}"
+    with_items: "{{ authorized_keys }}"
+  - name: "allow admin users passwordless sudo"
+    lineinfile:
+      dest: "/etc/sudoers"
+      state: "present"
+      regexp: "^%admin"
+      line: "admin ALL=(ALL) NOPASSWD: ALL"
+  vars:
+    authorized_keys:
+    - "carlos"
+    - "coleeason"
+    - "dbarrett"
+    - "florent"
+    - "john"
+    - "jpersaud"
+    - "nmetcalf"
+    - "noname"
+    - "phs"
