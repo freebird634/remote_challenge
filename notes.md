@@ -30,7 +30,7 @@ Individual Server Configuration:
 - [X] The 4th server will run nagios to monitor the web servers and load balancer
 
 On all boxes:
-- [ ] Add 'expensify' user
+- [X] Add 'expensify' user
       - Grant sudo access and install the attached public keys as its authentication credential
 
 Lock down the network:
@@ -88,3 +88,19 @@ Logged into the nagios browser interface at http://54.188.209.19/nagios
 I realized that an error was masking the fact that I didn't properly set up the nagios admin password (no_log: true) so I had to install some additional python packages to get that to work.
 
 After properly setting the nagiosadmin password, and restarting apache2 + nagios, I was able to access the nagios UI.
+
+### Adding expensify user to all hosts
+https://www.digitalocean.com/community/tutorials/how-to-create-a-new-sudo-enabled-user-on-ubuntu-22-04-quickstart
+
+https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html
+
+http://minimum-viable-automation.com/ansible/use-ansible-create-user-accounts-setup-ssh-keys/#Creating_User_accounts
+
+This part was the most straightforward since I already created some users in the nagios task using ansible's built-in user module. I opted to just add the users to an admin group and add them to the sudoers file so they could run sudo commands without a password.
+
+Checked the user exists and can run sudo commands with:
+```
+id expensify
+su - expensify
+sudo ls /root
+```
